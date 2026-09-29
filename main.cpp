@@ -2,8 +2,11 @@
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
+
 
 class Transaction {
 private:
@@ -15,8 +18,10 @@ private:
     string date;
 
 public:
+
     Transaction(int id, string type, double amount,
                 string category, string description, string date) {
+
         this->id = id;
         this->type = type;
         this->amount = amount;
@@ -24,6 +29,7 @@ public:
         this->description = description;
         this->date = date;
     }
+
 
     int getId() const {
         return id;
@@ -49,7 +55,9 @@ public:
         return date;
     }
 
+
     void display() const {
+
         cout << left
              << setw(5) << id
              << setw(12) << type
@@ -62,38 +70,55 @@ public:
 
 
 class ExpenseTracker {
+
 private:
+
     vector<Transaction> transactions;
     int nextId;
 
+    const string filename = "transactions.txt";
+
+
 public:
+
     ExpenseTracker() {
+
         nextId = 1;
+
+        loadTransactions();
     }
 
+
     void addTransaction() {
+
         string type;
         double amount;
         string category;
         string description;
         string date;
 
+
         cout << "\nEnter transaction type (Income/Expense): ";
         cin >> type;
+
 
         cout << "Enter amount: ";
         cin >> amount;
 
         cin.ignore();
 
+
         cout << "Enter category: ";
         getline(cin, category);
+
 
         cout << "Enter description: ";
         getline(cin, description);
 
+
         cout << "Enter date (DD-MM-YYYY): ";
         getline(cin, date);
+
 
         Transaction newTransaction(
             nextId,
@@ -104,20 +129,31 @@ public:
             date
         );
 
+
         transactions.push_back(newTransaction);
+
         nextId++;
+
+
+        saveTransactions();
+
 
         cout << "\nTransaction added successfully!\n";
     }
 
 
     void displayTransactions() const {
+
         if (transactions.empty()) {
+
             cout << "\nNo transactions found.\n";
+
             return;
         }
 
+
         cout << "\n===================== TRANSACTIONS =====================\n";
+
 
         cout << left
              << setw(5) << "ID"
@@ -127,42 +163,63 @@ public:
              << setw(25) << "Description"
              << "Date" << endl;
 
+
         cout << "---------------------------------------------------------"
              << "----------------\n";
 
+
         for (const Transaction& transaction : transactions) {
+
             transaction.display();
         }
     }
 
 
     void deleteTransaction() {
+
         if (transactions.empty()) {
+
             cout << "\nNo transactions available to delete.\n";
+
             return;
         }
 
+
         int id;
+
         cout << "\nEnter transaction ID to delete: ";
+
         cin >> id;
 
-        for (auto it = transactions.begin(); it != transactions.end(); ++it) {
+
+        for (auto it = transactions.begin();
+             it != transactions.end();
+             ++it) {
 
             if (it->getId() == id) {
+
                 transactions.erase(it);
 
+                saveTransactions();
+
                 cout << "Transaction deleted successfully!\n";
+
                 return;
             }
         }
 
-        cout << "Transaction with ID " << id << " not found.\n";
+
+        cout << "Transaction with ID "
+             << id
+             << " not found.\n";
     }
 
 
     void showBalance() const {
+
         double totalIncome = 0;
         double totalExpense = 0;
+
 
         for (const Transaction& transaction : transactions) {
 
@@ -171,6 +228,7 @@ public:
 
                 totalIncome += transaction.getAmount();
             }
+
             else if (transaction.getType() == "Expense" ||
                      transaction.getType() == "expense") {
 
@@ -178,27 +236,140 @@ public:
             }
         }
 
+
         double balance = totalIncome - totalExpense;
 
+
         cout << "\n================ BALANCE =================\n";
-        cout << "Total Income  : Rs. " << fixed << setprecision(2)
+
+        cout << "Total Income  : Rs. "
+             << fixed << setprecision(2)
              << totalIncome << endl;
 
-        cout << "Total Expense : Rs. " << fixed << setprecision(2)
+
+        cout << "Total Expense : Rs. "
+             << fixed << setprecision(2)
              << totalExpense << endl;
+
 
         cout << "------------------------------------------\n";
 
-        cout << "Current Balance: Rs. " << fixed << setprecision(2)
+
+        cout << "Current Balance: Rs. "
+             << fixed << setprecision(2)
              << balance << endl;
     }
 
+
+private:
+
+    void saveTransactions() const {
+
+        ofstream file(filename);
+
+
+        if (!file) {
+
+            cout << "\nError: Could not save transactions.\n";
+
+            return;
+        }
+
+
+        for (const Transaction& transaction : transactions) {
+
+            file << transaction.getId() << "|"
+                 << transaction.getType() << "|"
+                 << transaction.getAmount() << "|"
+                 << transaction.getCategory() << "|"
+                 << transaction.getDescription() << "|"
+                 << transaction.getDate()
+                 << "\n";
+        }
+
+
+        file.close();
+    }
+
+
+    void loadTransactions() {
+
+        ifstream file(filename);
+
+
+        if (!file) {
+
+            return;
+        }
+
+
+        string line;
+
+
+        while (getline(file, line)) {
+
+            stringstream ss(line);
+
+            string idString;
+            string type;
+            string amountString;
+            string category;
+            string description;
+            string date;
+
+
+            getline(ss, idString, '|');
+            getline(ss, type, '|');
+            getline(ss, amountString, '|');
+            getline(ss, category, '|');
+            getline(ss, description, '|');
+            getline(ss, date, '|');
+
+
+            if (idString.empty() || amountString.empty()) {
+
+                continue;
+            }
+
+
+            int id = stoi(idString);
+
+            double amount = stod(amountString);
+
+
+            Transaction transaction(
+                id,
+                type,
+                amount,
+                category,
+                description,
+                date
+            );
+
+
+            transactions.push_back(transaction);
+
+
+            if (id >= nextId) {
+
+                nextId = id + 1;
+            }
+        }
+
+
+        file.close();
+    }
+
+
+public:
 
     void run() {
 
         int choice;
 
+
         do {
+
             cout << "\n\n==========================================\n";
             cout << "          SMART EXPENSE TRACKER\n";
             cout << "==========================================\n";
@@ -210,8 +381,11 @@ public:
             cout << "5. Exit\n";
 
             cout << "==========================================\n";
+
             cout << "Enter your choice: ";
+
             cin >> choice;
+
 
             switch (choice) {
 
@@ -219,21 +393,26 @@ public:
                     addTransaction();
                     break;
 
+
                 case 2:
                     displayTransactions();
                     break;
+
 
                 case 3:
                     deleteTransaction();
                     break;
 
+
                 case 4:
                     showBalance();
                     break;
 
+
                 case 5:
                     cout << "\nThank you for using Smart Expense Tracker!\n";
                     break;
+
 
                 default:
                     cout << "\nInvalid choice. Please try again.\n";
