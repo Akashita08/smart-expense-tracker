@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
+#include <cctype>
 
 using namespace std;
 
@@ -30,7 +32,6 @@ public:
         this->date = date;
     }
 
-
     int getId() const {
         return id;
     }
@@ -55,7 +56,6 @@ public:
         return date;
     }
 
-
     void display() const {
 
         cout << left
@@ -79,6 +79,33 @@ private:
     const string filename = "transactions.txt";
 
 
+    string toLower(string text) const {
+
+        for (char& ch : text) {
+            ch = static_cast<char>(tolower(static_cast<unsigned char>(ch)));
+        }
+
+        return text;
+    }
+
+
+    void printHeader() const {
+
+        cout << "\n===================== TRANSACTIONS =====================\n";
+
+        cout << left
+             << setw(5) << "ID"
+             << setw(12) << "Type"
+             << setw(12) << "Amount"
+             << setw(15) << "Category"
+             << setw(25) << "Description"
+             << "Date" << endl;
+
+        cout << "---------------------------------------------------------"
+             << "----------------\n";
+    }
+
+
 public:
 
     ExpenseTracker() {
@@ -97,24 +124,19 @@ public:
         string description;
         string date;
 
-
         cout << "\nEnter transaction type (Income/Expense): ";
         cin >> type;
-
 
         cout << "Enter amount: ";
         cin >> amount;
 
         cin.ignore();
 
-
         cout << "Enter category: ";
         getline(cin, category);
 
-
         cout << "Enter description: ";
         getline(cin, description);
-
 
         cout << "Enter date (DD-MM-YYYY): ";
         getline(cin, date);
@@ -134,9 +156,7 @@ public:
 
         nextId++;
 
-
         saveTransactions();
-
 
         cout << "\nTransaction added successfully!\n";
     }
@@ -152,21 +172,7 @@ public:
         }
 
 
-        cout << "\n===================== TRANSACTIONS =====================\n";
-
-
-        cout << left
-             << setw(5) << "ID"
-             << setw(12) << "Type"
-             << setw(12) << "Amount"
-             << setw(15) << "Category"
-             << setw(25) << "Description"
-             << "Date" << endl;
-
-
-        cout << "---------------------------------------------------------"
-             << "----------------\n";
-
+        printHeader();
 
         for (const Transaction& transaction : transactions) {
 
@@ -215,6 +221,228 @@ public:
     }
 
 
+    void searchTransactions() const {
+
+        if (transactions.empty()) {
+
+            cout << "\nNo transactions available.\n";
+
+            return;
+        }
+
+
+        string keyword;
+
+        cin.ignore();
+
+        cout << "\nEnter keyword to search: ";
+
+        getline(cin, keyword);
+
+
+        keyword = toLower(keyword);
+
+        bool found = false;
+
+
+        printHeader();
+
+
+        for (const Transaction& transaction : transactions) {
+
+            string category = toLower(transaction.getCategory());
+
+            string description = toLower(transaction.getDescription());
+
+
+            if (category.find(keyword) != string::npos ||
+                description.find(keyword) != string::npos) {
+
+                transaction.display();
+
+                found = true;
+            }
+        }
+
+
+        if (!found) {
+
+            cout << "\nNo matching transactions found.\n";
+        }
+    }
+
+
+    void filterTransactions() const {
+
+        if (transactions.empty()) {
+
+            cout << "\nNo transactions available.\n";
+
+            return;
+        }
+
+
+        int choice;
+
+        cout << "\n========== FILTER ==========\n";
+        cout << "1. Income\n";
+        cout << "2. Expense\n";
+        cout << "3. Category\n";
+        cout << "Enter choice: ";
+
+        cin >> choice;
+
+
+        if (choice == 1 || choice == 2) {
+
+            string requiredType;
+
+            if (choice == 1) {
+                requiredType = "income";
+            }
+            else {
+                requiredType = "expense";
+            }
+
+
+            bool found = false;
+
+            printHeader();
+
+
+            for (const Transaction& transaction : transactions) {
+
+                if (toLower(transaction.getType()) == requiredType) {
+
+                    transaction.display();
+
+                    found = true;
+                }
+            }
+
+
+            if (!found) {
+
+                cout << "\nNo matching transactions found.\n";
+            }
+        }
+
+
+        else if (choice == 3) {
+
+            string category;
+
+            cin.ignore();
+
+            cout << "Enter category: ";
+
+            getline(cin, category);
+
+            category = toLower(category);
+
+
+            bool found = false;
+
+            printHeader();
+
+
+            for (const Transaction& transaction : transactions) {
+
+                if (toLower(transaction.getCategory()) == category) {
+
+                    transaction.display();
+
+                    found = true;
+                }
+            }
+
+
+            if (!found) {
+
+                cout << "\nNo matching transactions found.\n";
+            }
+        }
+
+
+        else {
+
+            cout << "\nInvalid filter choice.\n";
+        }
+    }
+
+
+    void sortTransactions() {
+
+        if (transactions.empty()) {
+
+            cout << "\nNo transactions available.\n";
+
+            return;
+        }
+
+
+        int choice;
+
+
+        cout << "\n========== SORT ==========\n";
+        cout << "1. Amount: Low to High\n";
+        cout << "2. Amount: High to Low\n";
+        cout << "3. ID: Low to High\n";
+        cout << "Enter choice: ";
+
+        cin >> choice;
+
+
+        if (choice == 1) {
+
+            sort(
+                transactions.begin(),
+                transactions.end(),
+                [](const Transaction& a, const Transaction& b) {
+                    return a.getAmount() < b.getAmount();
+                }
+            );
+        }
+
+
+        else if (choice == 2) {
+
+            sort(
+                transactions.begin(),
+                transactions.end(),
+                [](const Transaction& a, const Transaction& b) {
+                    return a.getAmount() > b.getAmount();
+                }
+            );
+        }
+
+
+        else if (choice == 3) {
+
+            sort(
+                transactions.begin(),
+                transactions.end(),
+                [](const Transaction& a, const Transaction& b) {
+                    return a.getId() < b.getId();
+                }
+            );
+        }
+
+
+        else {
+
+            cout << "\nInvalid sorting choice.\n";
+
+            return;
+        }
+
+
+        cout << "\nTransactions sorted successfully.\n";
+
+        displayTransactions();
+    }
+
+
     void showBalance() const {
 
         double totalIncome = 0;
@@ -223,14 +451,12 @@ public:
 
         for (const Transaction& transaction : transactions) {
 
-            if (transaction.getType() == "Income" ||
-                transaction.getType() == "income") {
+            if (toLower(transaction.getType()) == "income") {
 
                 totalIncome += transaction.getAmount();
             }
 
-            else if (transaction.getType() == "Expense" ||
-                     transaction.getType() == "expense") {
+            else if (toLower(transaction.getType()) == "expense") {
 
                 totalExpense += transaction.getAmount();
             }
@@ -246,14 +472,11 @@ public:
              << fixed << setprecision(2)
              << totalIncome << endl;
 
-
         cout << "Total Expense : Rs. "
              << fixed << setprecision(2)
              << totalExpense << endl;
 
-
         cout << "------------------------------------------\n";
-
 
         cout << "Current Balance: Rs. "
              << fixed << setprecision(2)
@@ -377,8 +600,11 @@ public:
             cout << "1. Add Transaction\n";
             cout << "2. View Transactions\n";
             cout << "3. Delete Transaction\n";
-            cout << "4. View Balance\n";
-            cout << "5. Exit\n";
+            cout << "4. Search Transactions\n";
+            cout << "5. Filter Transactions\n";
+            cout << "6. Sort Transactions\n";
+            cout << "7. View Balance\n";
+            cout << "8. Exit\n";
 
             cout << "==========================================\n";
 
@@ -393,32 +619,39 @@ public:
                     addTransaction();
                     break;
 
-
                 case 2:
                     displayTransactions();
                     break;
-
 
                 case 3:
                     deleteTransaction();
                     break;
 
-
                 case 4:
+                    searchTransactions();
+                    break;
+
+                case 5:
+                    filterTransactions();
+                    break;
+
+                case 6:
+                    sortTransactions();
+                    break;
+
+                case 7:
                     showBalance();
                     break;
 
-
-                case 5:
+                case 8:
                     cout << "\nThank you for using Smart Expense Tracker!\n";
                     break;
-
 
                 default:
                     cout << "\nInvalid choice. Please try again.\n";
             }
 
-        } while (choice != 5);
+        } while (choice != 8);
     }
 };
 
