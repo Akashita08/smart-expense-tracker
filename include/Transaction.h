@@ -3,41 +3,34 @@
 
 #include <string>
 
-using namespace std;
-
 class Transaction {
 
 private:
 
     int id;
-    string type;
+    std::string type;
     double amount;
-    string category;
-    string description;
-    string date;
+    std::string category;
+    std::string description;
+    std::string date;
 
 public:
 
     Transaction(
         int id,
-        string type,
+        std::string type,
         double amount,
-        string category,
-        string description,
-        string date
+        std::string category,
+        std::string description,
+        std::string date
     );
 
     int getId() const;
-
-    string getType() const;
-
+    std::string getType() const;
     double getAmount() const;
-
-    string getCategory() const;
-
-    string getDescription() const;
-
-    string getDate() const;
+    std::string getCategory() const;
+    std::string getDescription() const;
+    std::string getDate() const;
 
     void display() const;
 };

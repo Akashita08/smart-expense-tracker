@@ -3,55 +3,51 @@
 
 #include "Transaction.h"
 
-#include <vector>
 #include <string>
-
-using namespace std;
+#include <vector>
+#include <unordered_map>
 
 class ExpenseTracker {
 
 private:
 
-    vector<Transaction> transactions;
+    std::vector<Transaction> transactions;
 
     int nextId;
 
-    double monthlyBudget;
+    // month-year -> budget
+    std::unordered_map<std::string, double> monthlyBudgets;
 
-    const string transactionFile =
-        "data/transactions.txt";
+    const std::string transactionFile = "data/transactions.txt";
+    const std::string budgetFile = "data/budget.txt";
 
-    const string budgetFile =
-        "data/budget.txt";
+    std::string toLower(std::string text) const;
 
+    bool isValidDate(const std::string& date) const;
+    bool isValidMonth(std::string month) const;
 
-    string toLower(string text) const;
+    std::string getMonthYear(const std::string& date) const;
 
     void printHeader() const;
 
     void saveTransactions() const;
-
     void loadTransactions();
 
-    void saveBudget() const;
+    void saveBudgets() const;
+    void loadBudgets();
 
-    void loadBudget();
-
+    void showMonthlyAnalytics(const std::string& month) const;
 
 public:
 
     ExpenseTracker();
 
     void addTransaction();
-
     void displayTransactions() const;
-
     void deleteTransaction();
 
     void searchTransactions() const;
-
     void filterTransactions() const;
-
     void sortTransactions();
 
     void showBalance() const;
@@ -59,8 +55,9 @@ public:
     void showAnalytics() const;
 
     void setBudget();
-
     void showBudgetStatus() const;
+
+    void showMonthlyTransactions() const;
 
     void run();
 };

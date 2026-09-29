@@ -1,222 +1,248 @@
 #include "../include/ExpenseTracker.h"
 
 #include <iostream>
-#include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <algorithm>
 #include <cctype>
-#include <unordered_map>
 #include <limits>
-
-using namespace std;
-
 
 ExpenseTracker::ExpenseTracker() {
 
     nextId = 1;
 
-    monthlyBudget = 0;
-
     loadTransactions();
-
-    loadBudget();
+    loadBudgets();
 }
 
+// --------------------------------------------------
+// Utility Functions
+// --------------------------------------------------
 
-string ExpenseTracker::toLower(string text) const {
+std::string ExpenseTracker::toLower(std::string text) const {
 
-    for (char& ch : text) {
-
-        ch = static_cast<char>(
-            tolower(static_cast<unsigned char>(ch))
+    for (char& c : text) {
+        c = static_cast<char>(
+            std::tolower(static_cast<unsigned char>(c))
         );
     }
 
     return text;
 }
 
+bool ExpenseTracker::isValidDate(const std::string& date) const {
+
+    if (date.length() != 10) {
+        return false;
+    }
+
+    if (date[2] != '-' || date[5] != '-') {
+        return false;
+    }
+
+    for (int i = 0; i < 10; i++) {
+
+        if (i == 2 || i == 5) {
+            continue;
+        }
+
+        if (!std::isdigit(
+                static_cast<unsigned char>(date[i])
+            )) {
+            return false;
+        }
+    }
+
+    int day = std::stoi(date.substr(0, 2));
+    int month = std::stoi(date.substr(3, 2));
+
+    if (month < 1 || month > 12) {
+        return false;
+    }
+
+    if (day < 1 || day > 31) {
+        return false;
+    }
+
+    return true;
+}
+
+bool ExpenseTracker::isValidMonth(std::string month) const {
+
+    if (month.length() != 7) {
+        return false;
+    }
+
+    if (month[2] != '-') {
+        return false;
+    }
+
+    for (int i = 0; i < 7; i++) {
+
+        if (i == 2) {
+            continue;
+        }
+
+        if (!std::isdigit(
+                static_cast<unsigned char>(month[i])
+            )) {
+            return false;
+        }
+    }
+
+    int selectedMonth = std::stoi(month.substr(0, 2));
+    int selectedYear = std::stoi(month.substr(3, 4));
+
+    if (selectedMonth < 1 || selectedMonth > 12) {
+        return false;
+    }
+
+    if (selectedYear < 2000 || selectedYear > 2100) {
+        return false;
+    }
+
+    return true;
+}
+
+std::string ExpenseTracker::getMonthYear(
+    const std::string& date
+) const {
+
+    if (date.length() != 10) {
+        return "";
+    }
+
+    return date.substr(3, 2) + "-" + date.substr(6, 4);
+}
+
+// --------------------------------------------------
+// Display Helpers
+// --------------------------------------------------
 
 void ExpenseTracker::printHeader() const {
 
-    cout << "\n===================== TRANSACTIONS =====================\n";
+    std::cout << std::left
+              << std::setw(5) << "ID"
+              << std::setw(12) << "Type"
+              << std::setw(12) << "Amount"
+              << std::setw(15) << "Category"
+              << std::setw(25) << "Description"
+              << "Date"
+              << std::endl;
 
-    cout << left
-         << setw(5) << "ID"
-         << setw(12) << "Type"
-         << setw(12) << "Amount"
-         << setw(15) << "Category"
-         << setw(25) << "Description"
-         << "Date"
-         << endl;
-
-    cout << "---------------------------------------------------------"
-         << "----------------\n";
+    std::cout << std::string(85, '-') << std::endl;
 }
 
+// --------------------------------------------------
+// Add Transaction
+// --------------------------------------------------
 
 void ExpenseTracker::addTransaction() {
 
-    string type;
+    std::string type;
+    std::string category;
+    std::string description;
+    std::string date;
+
     double amount;
-    string category;
-    string description;
-    string date;
 
-
+    // Type
     while (true) {
 
-        cout << "\nEnter transaction type (Income/Expense): ";
-
-        cin >> type;
+        std::cout << "Enter type (income/expense): ";
+        std::cin >> type;
 
         type = toLower(type);
 
-
         if (type == "income" || type == "expense") {
-
             break;
         }
 
-
-        cout << "Invalid type. Please enter Income or Expense.\n";
+        std::cout << "Invalid type. Enter income or expense.\n";
     }
 
-
+    // Amount
     while (true) {
 
-        cout << "Enter amount: ";
+        std::cout << "Enter amount: ";
 
-
-        if (cin >> amount && amount > 0) {
+        if (std::cin >> amount &&
+            amount > 0) {
 
             break;
         }
 
+        std::cout << "Amount must be a positive number.\n";
 
-        cout << "Invalid amount. Enter a positive number.\n";
+        std::cin.clear();
 
-        cin.clear();
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
             '\n'
         );
     }
 
-
-    cin.ignore(
-        numeric_limits<streamsize>::max(),
+    std::cin.ignore(
+        std::numeric_limits<std::streamsize>::max(),
         '\n'
     );
 
-
+    // Category
     while (true) {
 
-        cout << "Enter category: ";
-
-        getline(cin, category);
-
+        std::cout << "Enter category: ";
+        std::getline(std::cin, category);
 
         if (category.empty()) {
-
-            cout << "Category cannot be empty.\n";
-
+            std::cout << "Category cannot be empty.\n";
             continue;
         }
 
-
-        if (category.find('|') != string::npos) {
-
-            cout << "Category cannot contain '|'.\n";
-
+        if (category.find('|') != std::string::npos) {
+            std::cout << "Category cannot contain '|'.\n";
             continue;
         }
-
 
         break;
     }
 
-
+    // Description
     while (true) {
 
-        cout << "Enter description: ";
-
-        getline(cin, description);
-
+        std::cout << "Enter description: ";
+        std::getline(std::cin, description);
 
         if (description.empty()) {
-
-            cout << "Description cannot be empty.\n";
-
+            std::cout << "Description cannot be empty.\n";
             continue;
         }
 
-
-        if (description.find('|') != string::npos) {
-
-            cout << "Description cannot contain '|'.\n";
-
+        if (description.find('|') != std::string::npos) {
+            std::cout << "Description cannot contain '|'.\n";
             continue;
         }
-
 
         break;
     }
 
-
+    // Date
     while (true) {
 
-        cout << "Enter date (DD-MM-YYYY): ";
+        std::cout << "Enter date (DD-MM-YYYY): ";
+        std::getline(std::cin, date);
 
-        getline(cin, date);
-
-
-        if (date.length() != 10 ||
-            date[2] != '-' ||
-            date[5] != '-') {
-
-            cout << "Invalid date format.\n";
-
-            continue;
+        if (isValidDate(date)) {
+            break;
         }
 
-
-        bool valid = true;
-
-
-        for (int i = 0; i < 10; i++) {
-
-            if (i == 2 || i == 5) {
-
-                continue;
-            }
-
-
-            if (!isdigit(
-                    static_cast<unsigned char>(date[i])
-                )) {
-
-                valid = false;
-
-                break;
-            }
-        }
-
-
-        if (!valid) {
-
-            cout << "Date must contain only numbers and '-'.\n";
-
-            continue;
-        }
-
-
-        break;
+        std::cout << "Invalid date format.\n";
     }
 
+    // Normalize category
+    category = toLower(category);
 
-    Transaction newTransaction(
+    Transaction transaction(
         nextId,
         type,
         amount,
@@ -225,151 +251,125 @@ void ExpenseTracker::addTransaction() {
         date
     );
 
-
-    transactions.push_back(newTransaction);
+    transactions.push_back(transaction);
 
     nextId++;
 
-
     saveTransactions();
 
-
-    cout << "\nTransaction added successfully!\n";
+    std::cout << "\nTransaction added successfully.\n";
 }
 
+// --------------------------------------------------
+// Display Transactions
+// --------------------------------------------------
 
 void ExpenseTracker::displayTransactions() const {
 
     if (transactions.empty()) {
 
-        cout << "\nNo transactions found.\n";
-
+        std::cout << "\nNo transactions available.\n";
         return;
     }
 
+    std::cout << "\nAll Transactions\n\n";
 
     printHeader();
 
-
     for (const Transaction& transaction : transactions) {
-
         transaction.display();
     }
 }
 
+// --------------------------------------------------
+// Delete Transaction
+// --------------------------------------------------
 
 void ExpenseTracker::deleteTransaction() {
 
     if (transactions.empty()) {
 
-        cout << "\nNo transactions available to delete.\n";
+        std::cout << "\nNo transactions available.\n";
+        return;
+    }
+
+    int id;
+
+    std::cout << "Enter transaction ID to delete: ";
+
+    if (!(std::cin >> id)) {
+
+        std::cout << "Invalid ID.\n";
+
+        std::cin.clear();
+
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
+            '\n'
+        );
 
         return;
     }
 
-
-    int id;
-
-
-    while (true) {
-
-        cout << "\nEnter transaction ID to delete: ";
-
-
-        if (cin >> id && id > 0) {
-
-            break;
+    auto it = std::find_if(
+        transactions.begin(),
+        transactions.end(),
+        [id](const Transaction& transaction) {
+            return transaction.getId() == id;
         }
+    );
 
+    if (it == transactions.end()) {
 
-        cout << "Please enter a valid positive ID.\n";
-
-        cin.clear();
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
-            '\n'
-        );
+        std::cout << "Transaction not found.\n";
+        return;
     }
 
+    transactions.erase(it);
 
-    for (auto it = transactions.begin();
-         it != transactions.end();
-         ++it) {
+    saveTransactions();
 
-
-        if (it->getId() == id) {
-
-            transactions.erase(it);
-
-            saveTransactions();
-
-
-            cout << "Transaction deleted successfully!\n";
-
-            return;
-        }
-    }
-
-
-    cout << "Transaction with ID "
-         << id
-         << " not found.\n";
+    std::cout << "Transaction deleted successfully.\n";
 }
 
+// --------------------------------------------------
+// Search
+// --------------------------------------------------
 
 void ExpenseTracker::searchTransactions() const {
 
     if (transactions.empty()) {
 
-        cout << "\nNo transactions available.\n";
-
+        std::cout << "\nNo transactions available.\n";
         return;
     }
 
-
-    string keyword;
-
-
-    cin.ignore(
-        numeric_limits<streamsize>::max(),
+    std::cin.ignore(
+        std::numeric_limits<std::streamsize>::max(),
         '\n'
     );
 
+    std::string keyword;
 
-    cout << "\nEnter keyword to search: ";
-
-    getline(cin, keyword);
-
-
-    if (keyword.empty()) {
-
-        cout << "Search keyword cannot be empty.\n";
-
-        return;
-    }
-
+    std::cout << "Enter search keyword: ";
+    std::getline(std::cin, keyword);
 
     keyword = toLower(keyword);
 
-
     bool found = false;
-
 
     printHeader();
 
-
     for (const Transaction& transaction : transactions) {
 
-        string category =
+        std::string category =
             toLower(transaction.getCategory());
 
-        string description =
+        std::string description =
             toLower(transaction.getDescription());
 
-
-        if (category.find(keyword) != string::npos ||
-            description.find(keyword) != string::npos) {
+        if (category.find(keyword) != std::string::npos ||
+            description.find(keyword) != std::string::npos) {
 
             transaction.display();
 
@@ -377,572 +377,558 @@ void ExpenseTracker::searchTransactions() const {
         }
     }
 
-
     if (!found) {
-
-        cout << "\nNo matching transactions found.\n";
+        std::cout << "No matching transactions found.\n";
     }
 }
 
+// --------------------------------------------------
+// Filter
+// --------------------------------------------------
 
 void ExpenseTracker::filterTransactions() const {
 
     if (transactions.empty()) {
 
-        cout << "\nNo transactions available.\n";
-
+        std::cout << "\nNo transactions available.\n";
         return;
     }
-
 
     int choice;
 
+    std::cout << "\nFilter By\n";
+    std::cout << "1. Income\n";
+    std::cout << "2. Expense\n";
+    std::cout << "3. Category\n";
+    std::cout << "Enter choice: ";
 
-    cout << "\n========== FILTER ==========\n";
+    if (!(std::cin >> choice)) {
 
-    cout << "1. Income\n";
+        std::cout << "Invalid choice.\n";
 
-    cout << "2. Expense\n";
+        std::cin.clear();
 
-    cout << "3. Category\n";
-
-    cout << "Enter choice: ";
-
-
-    if (!(cin >> choice)) {
-
-        cout << "Invalid input.\n";
-
-        cin.clear();
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
             '\n'
         );
 
         return;
     }
 
+    printHeader();
+
+    bool found = false;
 
     if (choice == 1 || choice == 2) {
 
-        string requiredType =
-            (choice == 1) ? "income" : "expense";
-
-
-        bool found = false;
-
-
-        printHeader();
-
+        std::string requiredType =
+            choice == 1 ? "income" : "expense";
 
         for (const Transaction& transaction : transactions) {
 
-            if (toLower(transaction.getType())
-                == requiredType) {
+            if (transaction.getType() == requiredType) {
 
                 transaction.display();
-
                 found = true;
             }
         }
-
-
-        if (!found) {
-
-            cout << "\nNo matching transactions found.\n";
-        }
     }
-
 
     else if (choice == 3) {
 
-        string category;
-
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
             '\n'
         );
 
+        std::string category;
 
-        cout << "Enter category: ";
-
-        getline(cin, category);
-
-
-        if (category.empty()) {
-
-            cout << "Category cannot be empty.\n";
-
-            return;
-        }
-
+        std::cout << "Enter category: ";
+        std::getline(std::cin, category);
 
         category = toLower(category);
 
-
-        bool found = false;
-
-
-        printHeader();
-
-
         for (const Transaction& transaction : transactions) {
 
-            if (toLower(transaction.getCategory())
-                == category) {
+            if (toLower(transaction.getCategory()) == category) {
 
                 transaction.display();
-
                 found = true;
             }
         }
-
-
-        if (!found) {
-
-            cout << "\nNo matching transactions found.\n";
-        }
     }
-
 
     else {
 
-        cout << "\nInvalid filter choice.\n";
+        std::cout << "Invalid choice.\n";
+        return;
+    }
+
+    if (!found) {
+        std::cout << "No matching transactions found.\n";
     }
 }
 
+// --------------------------------------------------
+// Sorting
+// --------------------------------------------------
 
 void ExpenseTracker::sortTransactions() {
 
     if (transactions.empty()) {
 
-        cout << "\nNo transactions available.\n";
-
+        std::cout << "\nNo transactions available.\n";
         return;
     }
 
-
     int choice;
 
+    std::cout << "\nSort By\n";
+    std::cout << "1. Amount: Low to High\n";
+    std::cout << "2. Amount: High to Low\n";
+    std::cout << "3. ID\n";
+    std::cout << "Enter choice: ";
 
-    cout << "\n========== SORT ==========\n";
+    if (!(std::cin >> choice)) {
 
-    cout << "1. Amount: Low to High\n";
+        std::cout << "Invalid choice.\n";
 
-    cout << "2. Amount: High to Low\n";
+        std::cin.clear();
 
-    cout << "3. ID: Low to High\n";
-
-    cout << "Enter choice: ";
-
-
-    if (!(cin >> choice)) {
-
-        cout << "Invalid input.\n";
-
-        cin.clear();
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
             '\n'
         );
 
         return;
     }
 
-
     if (choice == 1) {
 
-        sort(
+        std::sort(
             transactions.begin(),
             transactions.end(),
-
-            [](const Transaction& a,
-               const Transaction& b) {
-
-                return a.getAmount()
-                     < b.getAmount();
+            [](const Transaction& a, const Transaction& b) {
+                return a.getAmount() < b.getAmount();
             }
         );
     }
-
 
     else if (choice == 2) {
 
-        sort(
+        std::sort(
             transactions.begin(),
             transactions.end(),
-
-            [](const Transaction& a,
-               const Transaction& b) {
-
-                return a.getAmount()
-                     > b.getAmount();
+            [](const Transaction& a, const Transaction& b) {
+                return a.getAmount() > b.getAmount();
             }
         );
     }
-
 
     else if (choice == 3) {
 
-        sort(
+        std::sort(
             transactions.begin(),
             transactions.end(),
-
-            [](const Transaction& a,
-               const Transaction& b) {
-
-                return a.getId()
-                     < b.getId();
+            [](const Transaction& a, const Transaction& b) {
+                return a.getId() < b.getId();
             }
         );
     }
 
-
     else {
 
-        cout << "\nInvalid sorting choice.\n";
-
+        std::cout << "Invalid choice.\n";
         return;
     }
 
+    std::cout << "\nTransactions sorted successfully.\n";
 
-    cout << "\nTransactions sorted successfully.\n";
+    printHeader();
 
-    displayTransactions();
+    for (const Transaction& transaction : transactions) {
+        transaction.display();
+    }
 }
 
+// --------------------------------------------------
+// Overall Balance
+// --------------------------------------------------
 
 void ExpenseTracker::showBalance() const {
 
-    double totalIncome = 0;
-
-    double totalExpense = 0;
-
+    double income = 0;
+    double expenses = 0;
 
     for (const Transaction& transaction : transactions) {
 
-        if (toLower(transaction.getType())
-            == "income") {
-
-            totalIncome +=
-                transaction.getAmount();
+        if (transaction.getType() == "income") {
+            income += transaction.getAmount();
         }
 
-
-        else if (toLower(transaction.getType())
-                 == "expense") {
-
-            totalExpense +=
-                transaction.getAmount();
+        else {
+            expenses += transaction.getAmount();
         }
     }
 
+    std::cout << "\n========== BALANCE ==========\n";
 
-    double balance =
-        totalIncome - totalExpense;
+    std::cout << "Total Income   : ₹"
+              << std::fixed
+              << std::setprecision(2)
+              << income
+              << "\n";
 
+    std::cout << "Total Expenses : ₹"
+              << expenses
+              << "\n";
 
-    cout << "\n================ BALANCE =================\n";
+    std::cout << "Balance        : ₹"
+              << income - expenses
+              << "\n";
 
-
-    cout << "Total Income  : Rs. "
-         << fixed << setprecision(2)
-         << totalIncome
-         << endl;
-
-
-    cout << "Total Expense : Rs. "
-         << fixed << setprecision(2)
-         << totalExpense
-         << endl;
-
-
-    cout << "------------------------------------------\n";
-
-
-    cout << "Current Balance: Rs. "
-         << fixed << setprecision(2)
-         << balance
-         << endl;
+    std::cout << "=============================\n";
 }
 
+// --------------------------------------------------
+// Monthly Analytics
+// --------------------------------------------------
 
-void ExpenseTracker::showAnalytics() const {
+void ExpenseTracker::showMonthlyAnalytics(
+    const std::string& month
+) const {
 
-    if (transactions.empty()) {
-
-        cout << "\nNo transactions available for analysis.\n";
-
-        return;
-    }
-
-
-    double totalIncome = 0;
-
-    double totalExpense = 0;
+    double income = 0;
+    double expenses = 0;
 
     double highestExpense = 0;
+    double totalExpenseCount = 0;
 
-    int expenseCount = 0;
+    std::string highestExpenseDescription;
 
-
-    unordered_map<string, double> categorySpending;
-
+    std::unordered_map<std::string, double> categorySpending;
 
     for (const Transaction& transaction : transactions) {
 
-        string type =
-            toLower(transaction.getType());
-
-
-        if (type == "income") {
-
-            totalIncome +=
-                transaction.getAmount();
+        if (getMonthYear(transaction.getDate()) != month) {
+            continue;
         }
 
+        if (transaction.getType() == "income") {
 
-        else if (type == "expense") {
+            income += transaction.getAmount();
+        }
 
-            double amount =
-                transaction.getAmount();
+        else {
 
+            double amount = transaction.getAmount();
 
-            totalExpense += amount;
+            expenses += amount;
 
-            expenseCount++;
+            totalExpenseCount++;
 
+            if (amount > highestExpense) {
 
-            highestExpense =
-                max(highestExpense, amount);
+                highestExpense = amount;
 
+                highestExpenseDescription =
+                    transaction.getDescription();
+            }
 
-            categorySpending[
-                transaction.getCategory()
-            ] += amount;
+            std::string category =
+                toLower(transaction.getCategory());
+
+            categorySpending[category] += amount;
         }
     }
 
+    std::cout << "\n====================================\n";
+    std::cout << "      ANALYTICS FOR " << month << "\n";
+    std::cout << "====================================\n";
 
-    double balance =
-        totalIncome - totalExpense;
+    std::cout << std::fixed
+              << std::setprecision(2);
 
+    std::cout << "Total Income       : ₹"
+              << income << "\n";
 
-    double averageExpense = 0;
+    std::cout << "Total Expenses     : ₹"
+              << expenses << "\n";
 
+    std::cout << "Net Balance        : ₹"
+              << income - expenses << "\n";
 
-    if (expenseCount > 0) {
+    if (totalExpenseCount > 0) {
 
-        averageExpense =
-            totalExpense / expenseCount;
+        std::cout << "Highest Expense    : ₹"
+                  << highestExpense
+                  << " (" << highestExpenseDescription << ")\n";
+
+        std::cout << "Average Expense    : ₹"
+                  << expenses / totalExpenseCount
+                  << "\n";
     }
 
+    else {
 
-    cout << "\n========== ANALYTICS DASHBOARD ==========\n";
+        std::cout << "Highest Expense    : None\n";
+        std::cout << "Average Expense    : None\n";
+    }
 
-
-    cout << fixed << setprecision(2);
-
-
-    cout << "\nTotal Transactions : "
-         << transactions.size()
-         << endl;
-
-
-    cout << "Total Income       : Rs. "
-         << totalIncome
-         << endl;
-
-
-    cout << "Total Expenses     : Rs. "
-         << totalExpense
-         << endl;
-
-
-    cout << "Current Balance    : Rs. "
-         << balance
-         << endl;
-
-
-    cout << "Highest Expense    : Rs. "
-         << highestExpense
-         << endl;
-
-
-    cout << "Average Expense    : Rs. "
-         << averageExpense
-         << endl;
-
-
-    cout << "\n---------- CATEGORY SPENDING ----------\n";
-
+    std::cout << "\nCategory Spending\n";
+    std::cout << "-----------------------------\n";
 
     if (categorySpending.empty()) {
 
-        cout << "No expenses recorded.\n";
+        std::cout << "No expenses recorded.\n";
     }
-
 
     else {
 
         for (const auto& entry : categorySpending) {
 
-            double percentage =
-                (entry.second / totalExpense) * 100;
+            double percentage = 0;
 
+            if (expenses > 0) {
+                percentage =
+                    (entry.second / expenses) * 100;
+            }
 
-            cout << left
-                 << setw(18)
-                 << entry.first
-
-                 << "Rs. "
-                 << setw(10)
-                 << entry.second
-
-                 << percentage
-                 << "%\n";
+            std::cout << std::left
+                      << std::setw(15)
+                      << entry.first
+                      << " ₹"
+                      << std::setw(10)
+                      << entry.second
+                      << " ("
+                      << percentage
+                      << "%)\n";
         }
     }
+
+    std::cout << "====================================\n";
 }
 
+// --------------------------------------------------
+// Analytics Menu
+// --------------------------------------------------
+
+void ExpenseTracker::showAnalytics() const {
+
+    if (transactions.empty()) {
+
+        std::cout << "\nNo transactions available.\n";
+        return;
+    }
+
+    std::string month;
+
+    std::cout << "Enter month (MM-YYYY): ";
+    std::cin >> month;
+
+    if (!isValidMonth(month)) {
+
+        std::cout << "Invalid month. Use MM-YYYY.\n";
+        return;
+    }
+
+    showMonthlyAnalytics(month);
+}
+
+// --------------------------------------------------
+// Set Monthly Budget
+// --------------------------------------------------
 
 void ExpenseTracker::setBudget() {
 
-    double budget;
+    std::string month;
+    double amount;
 
+    std::cout << "Enter month (MM-YYYY): ";
+    std::cin >> month;
+
+    if (!isValidMonth(month)) {
+
+        std::cout << "Invalid month. Use MM-YYYY.\n";
+        return;
+    }
 
     while (true) {
 
-        cout << "\nEnter monthly budget: Rs. ";
+        std::cout << "Enter budget amount: ";
 
-
-        if (cin >> budget && budget > 0) {
+        if (std::cin >> amount &&
+            amount > 0) {
 
             break;
         }
 
+        std::cout << "Budget must be a positive number.\n";
 
-        cout << "Budget must be greater than zero.\n";
+        std::cin.clear();
 
-
-        cin.clear();
-
-
-        cin.ignore(
-            numeric_limits<streamsize>::max(),
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(),
             '\n'
         );
     }
 
+    monthlyBudgets[month] = amount;
 
-    monthlyBudget = budget;
+    saveBudgets();
 
-
-    saveBudget();
-
-
-    cout << "\nMonthly budget updated successfully!\n";
+    std::cout << "\nBudget for "
+              << month
+              << " set to ₹"
+              << std::fixed
+              << std::setprecision(2)
+              << amount
+              << ".\n";
 }
 
+// --------------------------------------------------
+// Budget Status
+// --------------------------------------------------
 
 void ExpenseTracker::showBudgetStatus() const {
 
-    if (monthlyBudget <= 0) {
+    std::string month;
 
-        cout << "\nNo monthly budget has been set.\n";
+    std::cout << "Enter month (MM-YYYY): ";
+    std::cin >> month;
+
+    if (!isValidMonth(month)) {
+
+        std::cout << "Invalid month. Use MM-YYYY.\n";
+        return;
+    }
+
+    auto budgetIt = monthlyBudgets.find(month);
+
+    if (budgetIt == monthlyBudgets.end()) {
+
+        std::cout << "No budget has been set for "
+                  << month
+                  << ".\n";
 
         return;
     }
 
-
-    double totalExpense = 0;
-
+    double expenses = 0;
 
     for (const Transaction& transaction : transactions) {
 
-        if (toLower(transaction.getType())
-            == "expense") {
+        if (transaction.getType() == "expense" &&
+            getMonthYear(transaction.getDate()) == month) {
 
-            totalExpense +=
-                transaction.getAmount();
+            expenses += transaction.getAmount();
         }
     }
 
+    double budget = budgetIt->second;
+    double remaining = budget - expenses;
 
-    double remaining =
-        monthlyBudget - totalExpense;
+    std::cout << "\n========== BUDGET STATUS ==========\n";
 
+    std::cout << "Month           : "
+              << month << "\n";
 
-    double percentageUsed =
-        (totalExpense / monthlyBudget) * 100;
+    std::cout << "Budget          : ₹"
+              << std::fixed
+              << std::setprecision(2)
+              << budget << "\n";
 
+    std::cout << "Spent           : ₹"
+              << expenses << "\n";
 
-    cout << "\n========== BUDGET STATUS ==========\n";
+    std::cout << "Remaining       : ₹"
+              << remaining << "\n";
 
+    if (expenses > budget) {
 
-    cout << fixed << setprecision(2);
+        std::cout << "Status          : OVER BUDGET\n";
 
-
-    cout << "Monthly Budget : Rs. "
-         << monthlyBudget
-         << endl;
-
-
-    cout << "Spent          : Rs. "
-         << totalExpense
-         << endl;
-
-
-    cout << "Remaining      : Rs. "
-         << remaining
-         << endl;
-
-
-    cout << "Budget Used    : "
-         << percentageUsed
-         << "%\n";
-
-
-    cout << "\nStatus: ";
-
-
-    if (remaining > 0) {
-
-        cout << "Within budget";
+        std::cout << "Exceeded By     : ₹"
+                  << expenses - budget
+                  << "\n";
     }
-
-
-    else if (remaining == 0) {
-
-        cout << "Budget fully used";
-    }
-
 
     else {
 
-        cout << "Budget exceeded";
+        std::cout << "Status          : WITHIN BUDGET\n";
     }
 
+    if (budget > 0) {
 
-    cout << endl;
+        std::cout << "Budget Used     : "
+                  << (expenses / budget) * 100
+                  << "%\n";
+    }
+
+    std::cout << "===================================\n";
 }
 
+// --------------------------------------------------
+// Monthly Transactions
+// --------------------------------------------------
 
-void ExpenseTracker::saveTransactions() const {
+void ExpenseTracker::showMonthlyTransactions() const {
 
-    ofstream file(transactionFile);
+    if (transactions.empty()) {
 
-
-    if (!file) {
-
-        cout << "\nError: Could not save transactions.\n";
-
+        std::cout << "\nNo transactions available.\n";
         return;
     }
 
+    std::string month;
+
+    std::cout << "Enter month (MM-YYYY): ";
+    std::cin >> month;
+
+    if (!isValidMonth(month)) {
+
+        std::cout << "Invalid month. Use MM-YYYY.\n";
+        return;
+    }
+
+    bool found = false;
+
+    std::cout << "\nTransactions for "
+              << month
+              << "\n\n";
+
+    printHeader();
+
+    for (const Transaction& transaction : transactions) {
+
+        if (getMonthYear(transaction.getDate()) == month) {
+
+            transaction.display();
+
+            found = true;
+        }
+    }
+
+    if (!found) {
+        std::cout << "No transactions found for "
+                  << month << ".\n";
+    }
+}
+
+// --------------------------------------------------
+// Transaction Storage
+// --------------------------------------------------
+
+void ExpenseTracker::saveTransactions() const {
+
+    std::ofstream file(transactionFile);
+
+    if (!file) {
+
+        std::cout << "Error: Could not save transactions.\n";
+        return;
+    }
 
     for (const Transaction& transaction : transactions) {
 
@@ -954,209 +940,195 @@ void ExpenseTracker::saveTransactions() const {
              << transaction.getDate()
              << "\n";
     }
-
-
-    file.close();
 }
-
 
 void ExpenseTracker::loadTransactions() {
 
-    ifstream file(transactionFile);
-
+    std::ifstream file(transactionFile);
 
     if (!file) {
-
         return;
     }
 
+    std::string line;
 
-    string line;
+    while (std::getline(file, line)) {
 
-
-    while (getline(file, line)) {
+        if (line.empty()) {
+            continue;
+        }
 
         try {
 
-            stringstream ss(line);
+            std::stringstream ss(line);
 
+            std::string idStr;
+            std::string type;
+            std::string amountStr;
+            std::string category;
+            std::string description;
+            std::string date;
 
-            string idString;
-            string type;
-            string amountString;
-            string category;
-            string description;
-            string date;
+            std::getline(ss, idStr, '|');
+            std::getline(ss, type, '|');
+            std::getline(ss, amountStr, '|');
+            std::getline(ss, category, '|');
+            std::getline(ss, description, '|');
+            std::getline(ss, date, '|');
 
+            int id = std::stoi(idStr);
+            double amount = std::stod(amountStr);
 
-            getline(ss, idString, '|');
-
-            getline(ss, type, '|');
-
-            getline(ss, amountString, '|');
-
-            getline(ss, category, '|');
-
-            getline(ss, description, '|');
-
-            getline(ss, date, '|');
-
-
-            if (idString.empty() ||
-                amountString.empty() ||
-                type.empty() ||
-                category.empty() ||
-                description.empty() ||
-                date.empty()) {
-
+            if (id <= 0 || amount <= 0) {
                 continue;
             }
 
+            type = toLower(type);
+            category = toLower(category);
 
-            int id =
-                stoi(idString);
-
-
-            double amount =
-                stod(amountString);
-
-
-            if (amount <= 0) {
-
+            if (type != "income" &&
+                type != "expense") {
                 continue;
             }
 
+            if (!isValidDate(date)) {
+                continue;
+            }
 
-            Transaction transaction(
+            transactions.emplace_back(
                 id,
-                toLower(type),
+                type,
                 amount,
                 category,
                 description,
                 date
             );
 
-
-            transactions.push_back(transaction);
-
-
-            nextId =
-                max(nextId, id + 1);
+            if (id >= nextId) {
+                nextId = id + 1;
+            }
         }
-
 
         catch (...) {
 
-            cout << "Warning: Skipping corrupted transaction data.\n";
+            std::cout
+                << "Warning: Skipped corrupted transaction record.\n";
         }
     }
-
-
-    file.close();
 }
 
+// --------------------------------------------------
+// Budget Storage
+// --------------------------------------------------
 
-void ExpenseTracker::saveBudget() const {
+void ExpenseTracker::saveBudgets() const {
 
-    ofstream file(budgetFile);
-
+    std::ofstream file(budgetFile);
 
     if (!file) {
 
-        cout << "\nError: Could not save budget.\n";
-
+        std::cout << "Error: Could not save budgets.\n";
         return;
     }
 
+    for (const auto& entry : monthlyBudgets) {
 
-    file << monthlyBudget;
-
-
-    file.close();
+        file << entry.first
+             << "|"
+             << entry.second
+             << "\n";
+    }
 }
 
+void ExpenseTracker::loadBudgets() {
 
-void ExpenseTracker::loadBudget() {
-
-    ifstream file(budgetFile);
-
+    std::ifstream file(budgetFile);
 
     if (!file) {
-
         return;
     }
 
+    std::string line;
 
-    if (!(file >> monthlyBudget)) {
+    while (std::getline(file, line)) {
 
-        monthlyBudget = 0;
+        if (line.empty()) {
+            continue;
+        }
+
+        try {
+
+            std::stringstream ss(line);
+
+            std::string month;
+            std::string amountStr;
+
+            std::getline(ss, month, '|');
+            std::getline(ss, amountStr, '|');
+
+            double amount = std::stod(amountStr);
+
+            if (isValidMonth(month) &&
+                amount > 0) {
+
+                monthlyBudgets[month] = amount;
+            }
+        }
+
+        catch (...) {
+
+            std::cout
+                << "Warning: Skipped corrupted budget record.\n";
+        }
     }
-
-
-    file.close();
 }
 
+// --------------------------------------------------
+// Main Menu
+// --------------------------------------------------
 
 void ExpenseTracker::run() {
 
     int choice;
 
+    while (true) {
 
-    do {
+        std::cout << "\n";
+        std::cout << "====================================\n";
+        std::cout << "       SMART EXPENSE TRACKER\n";
+        std::cout << "====================================\n";
 
-        cout << "\n\n==========================================\n";
+        std::cout << "1.  Add Transaction\n";
+        std::cout << "2.  View Transactions\n";
+        std::cout << "3.  Delete Transaction\n";
+        std::cout << "4.  Search Transactions\n";
+        std::cout << "5.  Filter Transactions\n";
+        std::cout << "6.  Sort Transactions\n";
+        std::cout << "7.  View Overall Balance\n";
+        std::cout << "8.  Monthly Analytics\n";
+        std::cout << "9.  Set Monthly Budget\n";
+        std::cout << "10. View Budget Status\n";
+        std::cout << "11. View Monthly Transactions\n";
+        std::cout << "12. Exit\n";
 
-        cout << "          SMART EXPENSE TRACKER\n";
+        std::cout << "------------------------------------\n";
+        std::cout << "Enter choice: ";
 
-        cout << "==========================================\n";
+        if (!(std::cin >> choice)) {
 
+            std::cout << "Invalid input. Enter a number.\n";
 
-        cout << "1. Add Transaction\n";
+            std::cin.clear();
 
-        cout << "2. View Transactions\n";
-
-        cout << "3. Delete Transaction\n";
-
-        cout << "4. Search Transactions\n";
-
-        cout << "5. Filter Transactions\n";
-
-        cout << "6. Sort Transactions\n";
-
-        cout << "7. View Balance\n";
-
-        cout << "8. Analytics Dashboard\n";
-
-        cout << "9. Set Monthly Budget\n";
-
-        cout << "10. View Budget Status\n";
-
-        cout << "11. Exit\n";
-
-
-        cout << "==========================================\n";
-
-
-        cout << "Enter your choice: ";
-
-
-        if (!(cin >> choice)) {
-
-            cout << "\nInvalid input. Enter a number from 1 to 11.\n";
-
-
-            cin.clear();
-
-
-            cin.ignore(
-                numeric_limits<streamsize>::max(),
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(),
                 '\n'
             );
-
 
             continue;
         }
 
+        std::cout << "\n";
 
         switch (choice) {
 
@@ -1164,61 +1136,57 @@ void ExpenseTracker::run() {
                 addTransaction();
                 break;
 
-
             case 2:
                 displayTransactions();
                 break;
-
 
             case 3:
                 deleteTransaction();
                 break;
 
-
             case 4:
                 searchTransactions();
                 break;
-
 
             case 5:
                 filterTransactions();
                 break;
 
-
             case 6:
                 sortTransactions();
                 break;
-
 
             case 7:
                 showBalance();
                 break;
 
-
             case 8:
                 showAnalytics();
                 break;
-
 
             case 9:
                 setBudget();
                 break;
 
-
             case 10:
                 showBudgetStatus();
                 break;
 
-
             case 11:
-                cout << "\nThank you for using Smart Expense Tracker!\n";
+                showMonthlyTransactions();
                 break;
 
+            case 12:
+
+                std::cout
+                    << "Thank you for using Smart Expense Tracker!\n";
+
+                return;
 
             default:
-                cout << "\nInvalid choice. Please try again.\n";
+
+                std::cout
+                    << "Invalid choice. Try again.\n";
         }
-
-
-    } while (choice != 11);
+    }
 }
